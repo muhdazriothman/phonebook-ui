@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react'
-import axios from 'axios'
-import { Link, useNavigate } from "react-router-dom"
-import Layout from "../components/Layout"
+import React, { useEffect, useState } from 'react';
+import { LockOutlined, UserOutlined } from '@ant-design/icons';
+import { Button, Form, Input } from 'antd';
 
-function Login() {
+import axios from 'axios';
+import { Link, useNavigate } from "react-router-dom";
+
+
+const Login = () => {
     const navigate = useNavigate();
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
     const [validationErrors, setValidationErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [form] = Form.useForm();
 
     useEffect(() => {
         if (localStorage.getItem('token') !== "" && localStorage.getItem('token') != null) {
@@ -17,13 +19,11 @@ function Login() {
         console.log(localStorage.getItem('token'))
     }, [navigate])
 
-    const loginAction = (e) => {
-        setValidationErrors({})
-        e.preventDefault();
+    const onFinish = (values) => {
         setIsSubmitting(true)
         let payload = {
-            email: email,
-            password: password,
+            email: values.email,
+            password: values.password,
         }
         axios.post('/login', payload)
             .then((r) => {
@@ -32,72 +32,88 @@ function Login() {
                 navigate("/list-entries");
             })
             .catch((e) => {
+                if (e.response.data.message !== undefined) {
+                    if (e.response.data.message.includes('email')) {
+                        form.setFields([
+                            {
+                                name: 'email',
+                                errors: [e.response.data.message],
+                            },
+                        ]);
+                    }
+                    if (e.response.data.message.includes('password')) {
+                        form.setFields([
+                            {
+                                name: 'password',
+                                errors: [e.response.data.message],
+                            },
+                        ]);
+                    }
+                    if (!e.response.data.message.includes('email') && !e.response.data.message.includes('password')) {
+                        setValidationErrors(e.response.data.message);
+                    }
+                }
+
                 setIsSubmitting(false)
-                if (e.response.data.message !== undefined) {
-                    setValidationErrors(e.response.data.message);
-                }
-                if (e.response.data.message !== undefined) {
-                    setValidationErrors(e.response.data.message);
-                }
             });
     }
 
-
     return (
-        <Layout>
-            <div className="row justify-content-md-center mt-5">
-                <div className="col-4">
-                    <div className="card">
-                        <div className="card-body">
-                            <h5 className="card-title mb-4">Sign In</h5>
-                            <form onSubmit={(e) => { loginAction(e) }}>
-                                {Object.keys(validationErrors).length !== 0 &&
-                                    <p className='text-center '><small className='text-danger'>Incorrect Email or Password</small></p>
-                                }
-
-                                <div className="mb-3">
-                                    <label
-                                        htmlFor="email"
-                                        className="form-label">
-                                        Email address
-                                    </label>
-                                    <input
-                                        type="email"
-                                        className="form-control"
-                                        id="email"
-                                        name="email"
-                                        value={email}
-                                        onChange={(e) => { setEmail(e.target.value) }}
-                                    />
-                                </div>
-                                <div className="mb-3">
-                                    <label
-                                        htmlFor="password"
-                                        className="form-label">Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        className="form-control"
-                                        id="password"
-                                        name="password"
-                                        value={password}
-                                        onChange={(e) => { setPassword(e.target.value) }}
-                                    />
-                                </div>
-                                <div className="d-grid gap-2">
-                                    <button
-                                        disabled={isSubmitting}
-                                        type="submit"
-                                        className="btn btn-primary btn-block">Login</button>
-                                    <p className="text-center">Don't have account? <Link to="/register">Register here</Link></p>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Layout>
+        <Form
+            form={form}
+            style={{ width: '300px', margin: 'auto', marginTop: '100px' }}
+            name="normal_login"
+            className="login-form"
+            disabled={isSubmitting}
+            onFinish={onFinish}
+        >
+            {Object.keys(validationErrors).length !== 0 &&
+                <p className='text-center '><small className='text-danger'>Incorrect Email or Password</small></p>
+            }
+            <Form.Item
+                name="email"
+                rules={[
+                    {
+                        type: 'email',
+                        message: 'Email is not valid',
+                    },
+                    {
+                        required: true,
+                        message: 'Email is required',
+                    },
+                ]}
+            >
+                <Input prefix={<UserOutlined className="site-form-item-icon" />} placeholder="Email" />
+            </Form.Item>
+            <Form.Item
+                name="password"
+                rules={[
+                    {
+                        required: true,
+                        message: 'Password is required',
+                    }
+                ]}
+            >
+                <Input
+                    prefix={<LockOutlined className="site-form-item-icon" />}
+                    type="password"
+                    placeholder="Password"
+                />
+            </Form.Item>
+            <Form.Item>
+                <Button type="primary" htmlType="submit" className="login-form-button">
+                    Log in
+                </Button>
+                {' '}
+                Or
+                {' '}
+                {
+                    isSubmitting
+                        ? <Link to="#">Create an account now!</Link>
+                        : <Link to="/register">Create an account now!</Link>
+                }
+            </Form.Item>
+        </Form>
     );
-}
-
+};
 export default Login;

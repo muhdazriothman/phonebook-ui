@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Link, useNavigate } from "react-router-dom"
-import Layout from "../components/Layout"
+import { Card, Form, Input, Button } from 'antd';
+import Swal from 'sweetalert2'
 
 function Register() {
     const navigate = useNavigate();
-    const [name, setName] = useState("")
-    const [email, setEmail] = useState("")
-    const [password, setPassword] = useState("")
-    const [confirmPassword, setConfirmPassword] = useState("")
     const [validationErrors, setValidationErrors] = useState({});
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [form] = Form.useForm();
 
     useEffect(() => {
         if (localStorage.getItem('token') !== "" && localStorage.getItem('token') != null) {
@@ -18,139 +16,187 @@ function Register() {
         }
     }, [navigate])
 
-    const registerAction = (e) => {
-        e.preventDefault();
+    const onFinish = (values) => {
         setIsSubmitting(true)
-        if (password !== confirmPassword) {
-            setIsSubmitting(false)
-            setValidationErrors({ password: ['Password and Confirm Password should be same'] })
-            return;
-        }
 
         let payload = {
-            name: name,
-            email: email,
-            password: password
+            name: values.name,
+            email: values.email,
+            password: values.password
         }
 
         axios.post('/user', payload)
             .then((r) => {
                 setIsSubmitting(false)
-                localStorage.setItem('token', r.data.token)
-                navigate("/list-entries");
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Registration successful!',
+                    showConfirmButton: false,
+                    timer: 5000
+                })
+
+                setTimeout(() => {
+                    navigate("/");
+                }, 5000)
             })
             .catch((e) => {
-                setIsSubmitting(false)
                 if (e.response.data.message !== undefined) {
-                    setValidationErrors(e.response.data.message);
+                    if (e.response.data.message.includes('name')) {
+                        form.setFields([
+                            {
+                                name: 'name',
+                                errors: [e.response.data.message],
+                            },
+                        ]);
+                    }
+                    if (e.response.data.message.includes('email')) {
+                        form.setFields([
+                            {
+                                name: 'email',
+                                errors: [e.response.data.message],
+                            },
+                        ]);
+                    }
+                    if (e.response.data.message.includes('password')) {
+                        form.setFields([
+                            {
+                                name: 'password',
+                                errors: [e.response.data.message],
+                            },
+                        ]);
+                    }
+                    if (!e.response.data.message.includes('email') && !e.response.data.message.includes('password')) {
+                        setValidationErrors(e.response.data.message);
+                    }
                 }
+                setIsSubmitting(false)
             });
     }
 
     return (
-        <Layout>
-            <div className="row justify-content-md-center mt-5">
-                <div className="col-4">
-                    <div className="card">
-                        <div className="card-body">
-                            <h5 className="card-title mb-4">Register</h5>
-                            <form onSubmit={(e) => registerAction(e)}>
-                                <div className="mb-3">
-                                    <label
-                                        htmlFor="name"
-                                        className="form-label">Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        id="name"
-                                        name="name"
-                                        value={name}
-                                        onChange={(e) => { setName(e.target.value) }}
-                                    />
-                                    {validationErrors.name !== undefined &&
-                                        <div className="flex flex-col">
-                                            <small className="text-danger">
-                                                {validationErrors.name[0]}
-                                            </small >
-                                        </div>
-                                    }
+        <Card
+            title='Register'
+            style={{
+                width: 500,
+                margin: 'auto',
+                marginTop: 100
+            }}
+        >
+            <Form
+                layout='vertical'
+                form={form}
+                name="register"
+                onFinish={onFinish}
+                style={{
+                    maxWidth: 600,
+                }}
+                scrollToFirstError
+                disabled={isSubmitting}
 
-                                </div>
-                                <div className="mb-3">
-                                    <label
-                                        htmlFor="email"
-                                        className="form-label">Email address
-                                    </label>
-                                    <input
-                                        type="email"
-                                        className="form-control"
-                                        id="email"
-                                        name="email"
-                                        value={email}
-                                        onChange={(e) => { setEmail(e.target.value) }}
-                                    />
-                                    {validationErrors.email !== undefined &&
-                                        <div className="flex flex-col">
-                                            <small className="text-danger">
-                                                {validationErrors.email[0]}
-                                            </small >
-                                        </div>
-                                    }
+            >
+                {Object.keys(validationErrors).length !== 0 &&
+                    <p className='text-center '><small className='text-danger'>Incorrect Email or Password</small></p>
+                }
+                <Form.Item
+                    name="name"
+                    label="Name"
+                    rules={[
+                        {
+                            required: true,
+                            message: 'Name is required',
+                            whitespace: true,
+                        },
+                    ]}
+                    hasFeedback
+                >
+                    <Input />
+                </Form.Item>
+                <Form.Item
+                    name="email"
+                    label="E-mail"
+                    rules={[
+                        {
+                            type: 'email',
+                            message: 'Email is not valid',
+                        },
+                        {
+                            required: true,
+                            message: 'Email is required',
+                        },
+                    ]}
+                    hasFeedback
+                >
+                    <Input />
+                </Form.Item>
 
-                                </div>
-                                <div className="mb-3">
-                                    <label
-                                        htmlFor="password"
-                                        className="form-label">Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        className="form-control"
-                                        id="password"
-                                        name="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                    />
-                                    {validationErrors.password !== undefined &&
-                                        <div className="flex flex-col">
-                                            <small className="text-danger">
-                                                {validationErrors.password[0]}
-                                            </small >
-                                        </div>
-                                    }
-                                </div>
-                                <div className="mb-3">
-                                    <label
-                                        htmlFor="confirm_password"
-                                        className="form-label">Confirm Password
-                                    </label>
-                                    <input
-                                        type="password"
-                                        className="form-control"
-                                        id="confirm_password"
-                                        name="confirm_password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                    />
-                                </div>
-                                <div className="d-grid gap-2">
-                                    <button
-                                        disabled={isSubmitting}
-                                        type="submit"
-                                        className="btn btn-primary btn-block">Register Now
-                                    </button>
-                                    <p
-                                        className="text-center">Have already an account <Link to="/">Login here</Link>
-                                    </p>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </Layout>
-    );
+                <Form.Item
+                    name="password"
+                    label="Password"
+                    rules={[
+                        {
+                            required: true,
+                            message: 'Password is required',
+                        },
+                        {
+                            min: 8,
+                            message: 'Password must be at least 6 characters long'
+                        },
+                        {
+                            max: 15,
+                            message: 'Password must be at most 15 characters long'
+                        }
+                    ]}
+                    hasFeedback
+                >
+                    <Input.Password />
+                </Form.Item>
+
+                <Form.Item
+                    name="confirm"
+                    label="Confirm Password"
+                    dependencies={['password']}
+                    hasFeedback
+                    rules={[
+                        {
+                            required: true,
+                            message: 'Please confirm your password!',
+                        },
+                        ({ getFieldValue }) => ({
+                            validator(_, value) {
+                                if (!value || getFieldValue('password') === value) {
+                                    return Promise.resolve();
+                                }
+                                return Promise.reject(new Error('Passwords do not match'));
+                            },
+                        }),
+                    ]}
+                >
+                    <Input.Password />
+                </Form.Item>
+
+                <Form.Item>
+                    <Button type="primary" htmlType="submit" style={
+                        {
+                            width: '100%'
+                        }
+                    }>
+                        Register
+                    </Button>
+                </Form.Item>
+
+                <Form.Item>
+                    <Link to="/" style={
+                        {
+                            textAlign: 'center',
+                            display: 'block'
+                        }
+
+                    }>Back to login</Link>
+                </Form.Item>
+            </Form>
+        </Card>
+    )
 }
 
 export default Register;
